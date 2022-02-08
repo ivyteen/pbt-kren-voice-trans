@@ -9,20 +9,11 @@ app = Flask(__name__)
 client_id = "as77sn9asj"
 client_secret = "W9Jo2sJK7x4br8MnkHxl1NrW7fV7OU88XgNCbxKT"
 
-
-@app.route("/")
-def render_vt_page():
-    return render_template('voice_translation.html')
-
-@app.route('/trans', methods=['POST'])
-def translate():
-    
-    #STT
+def stt(data):
     resp_text = ""
     lang = "Kor"
     stt_url = "https://naveropenapi.apigw.ntruss.com/recog/v1/stt?lang=" + lang
 
-    file = request.files['file']
     headers = {
         "X-NCP-APIGW-API-KEY-ID": client_id,
         "X-NCP-APIGW-API-KEY": client_secret,
@@ -30,7 +21,6 @@ def translate():
         "Content-Type": "application/octet-stream"
     }
 
-    data = file.read()
 
     response = requests.post(stt_url,  data=data, headers=headers)
     rescode = response.status_code
@@ -41,15 +31,17 @@ def translate():
     else:
         resp_text = response.text
         print("Error : " + response.text)
+    
+    return resp_text
 
-
-    #PAPAGO
+def papago(text):
+    resp_text = ""
     papago_url = "https://naveropenapi.apigw.ntruss.com/nmt/v1/translation"    
 
     val = {
         "source": 'ko',
         "target": 'en',
-        "text": resp_text
+        "text": text
     }
 
     headers = {
@@ -68,9 +60,9 @@ def translate():
         print("Error : " + response.text)
 
 
-    text_data = resp_text
-    print(text_data)
-    
+    return resp_text
+
+def tts(text):
     speaker = "clara"
     speed = "0"
     pitch = "0"
@@ -80,7 +72,7 @@ def translate():
     val = {
         "speaker": speaker,
         "speed": speed,
-        "text": text_data,
+        "text": text,
         "format": format
     }
 
@@ -98,9 +90,25 @@ def translate():
     if(rescode != 200):
         return {"result_code":rescode}
 
+    return response.content
 
-    return Response(response.content, mimetype="audio/wav")
 
+@app.route("/")
+def render_vt_page():
+    return render_template('voice_translation.html')
+
+@app.route('/trans', methods=['POST'])
+def translate():
+    file = request.files['file']
+    data = file.read()
+    
+    stt_text = stt(data)
+    papago_text = papago(stt_text)
+    audio_data = tts(papago_text)
+    
+    return Response(audio_data, mimetype="audio/wav")
+    
+  
 
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=8080, ssl_context='adhoc')
