@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>파파고 한영 음성 번역기</title>
+
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+</head>
+
+<body>
+
+    <div class="container p-3 my-3 border">
+        <div class="row mb-3 mx-2" id="stt_ctl">
+            <button type="button" class="btn btn-secondary" id="record">REC</button>
+            &nbsp;&nbsp;
+            <button type="button" class="btn btn-primary" id="trans">TRANSLATE</button>
+            &nbsp;&nbsp;
+            <p class="text-danger font-weight-bold" id="wav_ready" style="display:none">Data Ready</p>
+        </div>    
+        
+        <div class="row mb-3 mx-2">
+            <audio id="tts_audio" type="audio/x-wav">
+        </div>
+
+    </div>
+
+    <script>
+
+        let blob = null
+        let stt_text = null
+        let papago_text = null
+
+        const record = document.getElementById("record")
+        const stop = document.getElementById("stop")
+        const audio = document.createElement('audio')
+
+        const audioCtx = new(window.AudioContext || window.webkitAudioContext)() // 오디오 컨텍스트 정의
+
+        const analyser = audioCtx.createAnalyser()
+
+        $("#trans").click(()=>{
+            console.log("TRANSLATE clicked")
+            if (blob !== null){
+
+                let audio_data = new FormData()
+                audio_data.append('file',blob)
+
+                $.ajax(
+                    {
+                        //Send this to Flask 
+                        url: window.location.href+"/trans",
+                        data: audio_data,
+                        type: "POST",
+                        xhrFields: { responseType: 'blob' },
+                        cache: false,
+                        processData: false,
+                        contentType : false
+                        
+                    }
+                ).done(function(data){
+
+                    audio_url = URL.createObjectURL(data)
+                    console.log(audio_url)
+                
+                    $('#tts_audio').attr('src', audio_url)
+                    $('#tts_audio').get(0).load()
+                    $('#tts_audio').get(0).play()
+                
+
+                }).fail(function(xhr,status,errorThrown){
+                    alert("오류명:"+errorThrown)
+
+                })
+            }
+        })
+
+ 
+
+        if (navigator.mediaDevices) {
+            console.log('getUserMedia supported.')
+
+            const constraints = {
+                audio: true
+            }
+            let chunks = []
+
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then(stream => {
+
+                    const mediaRecorder = new MediaRecorder(stream)
+
+                    // When REC button click
+                    record.onclick = () => {
+
+                        if(mediaRecorder.state === "inactive") {
+
+                            $("#wav_ready").hide()
+
+                            mediaRecorder.start()
+                            console.log(mediaRecorder.state)
+                            console.log("recorder started")
+                            record.style.background = "red"
+                            record.style.color = "black"
+                        }
+                        else {
+                            mediaRecorder.stop()
+                            console.log(mediaRecorder.state)
+                            console.log("recorder stopped")
+                            record.style.background = ""
+                            record.style.color = ""                            
+                        }
+
+
+                    }
+
+                    mediaRecorder.onstop = e => {
+                        console.log("data available after MediaRecorder.stop() called.")
+
+                        blob = new Blob(chunks, {
+                            'type': 'audio/wav'
+                        })
+                        chunks = []
+
+                        console.log("recorder stopped")
+                        $("#wav_ready").show()
+                        console.log(blob)
+
+                    }
+
+                    mediaRecorder.ondataavailable = e => {
+                        chunks.push(e.data)
+                    }
+                })
+                .catch(err => {
+                    console.log('The following error occurred: ' + err)
+                })
+        }
+    </script>
+</body>
+</html>
