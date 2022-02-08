@@ -6,8 +6,8 @@ import string
 
 app = Flask(__name__)
 
-client_id = ""
-client_secret = ""
+client_id = "as77sn9asj"
+client_secret = "W9Jo2sJK7x4br8MnkHxl1NrW7fV7OU88XgNCbxKT"
 
 
 @app.route("/")
@@ -17,28 +17,90 @@ def render_vt_page():
 @app.route('/trans', methods=['POST'])
 def translate():
     
-    #미션 : 아래 힌트와 API 예제 코드를 활용하여 한영 동시 통역기를 구현하고, 
-    # 구현내용을 정리하여 발표하세요
-    
-    #힌트 1 (STT 오디오 입력)
-    #file = request.files['file']
-    #data = file.read()
+    #STT
+    resp_text = ""
+    lang = "Kor"
+    stt_url = "https://naveropenapi.apigw.ntruss.com/recog/v1/stt?lang=" + lang
 
-    #힌트 2 (STT 응답에서 추출)
-    #resp_text = response.text.split(":")[1].split("}")[0].strip(string.punctuation)
+    file = request.files['file']
+    headers = {
+        "X-NCP-APIGW-API-KEY-ID": client_id,
+        "X-NCP-APIGW-API-KEY": client_secret,
 
-    #힌트 3 (번역 API 요청 파라미터)
-    #https://api.ncloud-docs.com/docs/ai-naver-papagonmt-translation 참고
+        "Content-Type": "application/octet-stream"
+    }
+
+    data = file.read()
+
+    response = requests.post(stt_url,  data=data, headers=headers)
+    rescode = response.status_code
+    if(rescode == 200):
+        resp_text = response.text.split(":")[1].split("}")[0].strip(string.punctuation)
+        print (response.text)
+        
+    else:
+        resp_text = response.text
+        print("Error : " + response.text)
+
+
+    #PAPAGO
+    papago_url = "https://naveropenapi.apigw.ntruss.com/nmt/v1/translation"    
+
+    val = {
+        "source": 'ko',
+        "target": 'en',
+        "text": resp_text
+    }
+
+    headers = {
+        "X-NCP-APIGW-API-KEY-ID": client_id,
+        "X-NCP-APIGW-API-KEY": client_secret
+    }
+
+    response = requests.post(papago_url,  data=val, headers=headers)
+    rescode = response.status_code
+
+    if(rescode == 200):
+        resp_text = response.json()['message']['result']['translatedText']
+        print(resp_text)
+        
+    else:
+        print("Error : " + response.text)
+
+
+    text_data = resp_text
+    print(text_data)
     
-    #힌트 4 (TTS 요청 파라미터)
-    #https://api.ncloud-docs.com/docs/ai-naver-clovavoice-ttspremium 참고
-    #음성 포맷(format)은 wav를 사용하세요
+    speaker = "clara"
+    speed = "0"
+    pitch = "0"
+    emotion = "0"
+    format = "wav"
+
+    val = {
+        "speaker": speaker,
+        "speed": speed,
+        "text": text_data,
+        "format": format
+    }
+
+    tts_url = "https://naveropenapi.apigw.ntruss.com/tts-premium/v1/tts"
+
+    headers = {
+        "X-NCP-APIGW-API-KEY-ID": client_id,
+        "X-NCP-APIGW-API-KEY": client_secret,
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+
+    response = requests.post(tts_url,  data=val, headers=headers)
+    rescode = response.status_code
     
-    #힌트 5 (TTS 응답 리턴)
-    #return Response(response.content, mimetype="audio/wav")
-    
-    return
+    if(rescode != 200):
+        return {"result_code":rescode}
+
+
+    return Response(response.content, mimetype="audio/wav")
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host="0.0.0.0", port=5050, ssl_context='adhoc')
+    app.run(debug=True, host="0.0.0.0", port=8080, ssl_context='adhoc')
