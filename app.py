@@ -6,8 +6,8 @@ import string
 
 app = Flask(__name__)
 
-client_id = "as77sn9asj"
-client_secret = "W9Jo2sJK7x4br8MnkHxl1NrW7fV7OU88XgNCbxKT"
+client_id = ""
+client_secret = ""
 
 def stt(data):
     resp_text = ""
