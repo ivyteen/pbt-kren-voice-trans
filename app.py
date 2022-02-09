@@ -111,4 +111,5 @@ def translate():
   
 
 if __name__ == '__main__':
+    #실행 명령 : flask run --cert=adhoc --host=0.0.0.0 --port=8080
     app.run(debug=True, host="0.0.0.0", port=8080, ssl_context='adhoc')
