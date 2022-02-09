@@ -24,15 +24,18 @@ def translate():
     #file = request.files['file']
     #data = file.read()
 
-    #힌트 2 (STT 응답에서 추출)
-    #resp_text = response.text.split(":")[1].split("}")[0].strip(string.punctuation)
+    #힌트 2 (STT 응답에서 text 추출)
+    #stt_text = response.json()["text"]
 
     #힌트 3 (번역 API 요청 파라미터)
     #https://api.ncloud-docs.com/docs/ai-naver-papagonmt-translation 참고
     
+    #힌트 4 (번역 API 응답에서 text 추출)
+    #papago_text = response.json()['message']['result']['translatedText']
+    
     #힌트 4 (TTS 요청 파라미터)
     #https://api.ncloud-docs.com/docs/ai-naver-clovavoice-ttspremium 참고
-    #음성 포맷(format)은 wav를 사용하세요
+    #스피커(speaker)는 "clara", 포맷(format)은 "wav"를 사용하세요
     
     #힌트 5 (TTS 응답 리턴)
     #return Response(response.content, mimetype="audio/wav")
